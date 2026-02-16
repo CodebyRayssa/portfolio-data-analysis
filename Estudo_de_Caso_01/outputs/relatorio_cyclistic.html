@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Relatório Cyclistic — 12 meses (2025)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      color: #111;
+      line-height: 1.5;
+    }
+    h1, h2 { margin-bottom: 8px; }
+    .subtitle { color: #444; margin-top: 0; }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 18px 0;
+    }
+    .insight {
+      background: #f7f7f7;
+      border-left: 5px solid #222;
+      padding: 10px 14px;
+      margin-top: 10px;
+    }
+    img {
+      max-width: 100%;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .small { color: #666; font-size: 0.95rem; }
+    ul { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Relatório Cyclistic — Análise 12 meses (2025)</h1>
+  <p class="subtitle">Objetivo: entender diferenças de comportamento entre <b>casual</b> e <b>member</b> para apoiar estratégias de conversão.</p>
+
+  <div class="card">
+    <h2>Principais insights</h2>
+    <ul>
+      <li><b>Casual</b> tem viagens <b>mais longas</b> (perfil mais recreativo/turístico).</li>
+      <li><b>Member</b> tem padrão forte de uso em <b>dias úteis</b> e picos de <b>horário comercial</b> (perfil de deslocamento).</li>
+    </ul>
+    <div class="insight">
+      <b>Interpretação:</b> membros usam como transporte; casuais usam como lazer. Isso direciona campanhas diferentes.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>1) Duração média (minutos)</h2>
+    <p class="small">Comparação direta entre member e casual.</p>
+    <img src="duracao_media.png" alt="Duração média">
+    <div class="insight">
+      <b>O que isso indica:</b> viagens mais longas sugerem lazer (casual) e viagens mais curtas sugerem deslocamento (member).
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2) Uso por hora do dia</h2>
+    <p class="small">Quantidade de viagens por hora para cada tipo de usuário.</p>
+    <img src="uso_por_hora.png" alt="Uso por hora">
+    <div class="insight">
+      <b>O que isso indica:</b> picos em 7–9h e 16–18h reforçam uso de commute, típico de members.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3) Uso por dia da semana</h2>
+    <p class="small">Comparação entre dias úteis e fim de semana.</p>
+    <img src="uso_por_dia.png" alt="Uso por dia da semana">
+    <div class="insight">
+      <b>O que isso indica:</b> casual tende a aumentar no fim de semana; member se mantém forte durante a semana.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Recomendações (exemplo)</h2>
+    <ul>
+      <li>Campanhas de upgrade para <b>casual</b> focadas em <b>fim de semana</b> (benefícios para lazer).</li>
+      <li>Oferta de plano com vantagens em <b>horários de pico</b> (commute) para aumentar retenção.</li>
+      <li>Mensagens personalizadas por comportamento: “lazer” vs “deslocamento”.</li>
+    </ul>
+  </div>
+
+  <p class="small">Arquivo gerado automaticamente via Python. Basta abrir este HTML no navegador.</p>
+</body>
+</html>
