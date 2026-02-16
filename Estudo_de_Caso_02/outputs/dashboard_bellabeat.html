@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Bellabeat — Dashboard (Case Study 2)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 28px; color: #111; background: #fff; }
+    h1 { margin: 0 0 8px 0; }
+    .sub { color:#555; margin:0 0 18px 0; }
+    .grid { display:grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap: 12px; }
+    .card { border: 1px solid #e6e6e6; border-radius: 12px; padding: 14px; background:#fafafa; }
+    .kpi { font-size: 22px; font-weight: 700; }
+    .label { color:#666; font-size: 13px; margin-top: 4px; }
+    .charts { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    .panel { border: 1px solid #e6e6e6; border-radius: 12px; padding: 14px; }
+    canvas { width: 100% !important; height: 360px !important; }
+    .row { display:flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+    .pill { border:1px solid #e6e6e6; border-radius: 999px; padding: 8px 12px; background:#fff; }
+    .insight { margin-top:10px; background:#f3f3f3; border-left: 5px solid #111; padding: 10px 12px; border-radius: 8px; }
+    .tools { display:flex; gap: 10px; align-items:center; margin: 16px 0 8px 0; }
+    input { padding: 10px 12px; border-radius: 10px; border: 1px solid #ddd; width: 320px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px 8px; text-align: left; }
+    th { cursor: pointer; background: #fafafa; position: sticky; top: 0; }
+    .small { color:#666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Bellabeat — Dashboard (Case Study 2)</h1>
+  <p class="sub">Base: Fitbit (atividade + sono agregado por dia). Objetivo: extrair padrões de uso e recomendações.</p>
+
+  <div class="grid" id="kpis"></div>
+
+  <div class="row">
+    <div class="pill"><b>Correlação Passos × Sono:</b> <span id="corr1"></span></div>
+    <div class="pill"><b>Correlação Passos × Calorias:</b> <span id="corr2"></span></div>
+  </div>
+
+  <div class="insight" id="insightBox"></div>
+
+  <div class="charts">
+    <div class="panel">
+      <h3>Passos médios por dia da semana</h3>
+      <canvas id="chartStepsWeek"></canvas>
+      <p class="small">Usar isso para planejar campanhas por dia (ex.: reforço em dias fracos).</p>
+    </div>
+    <div class="panel">
+      <h3>Sono médio por dia da semana</h3>
+      <canvas id="chartSleepWeek"></canvas>
+      <p class="small">Útil para ações de rotina noturna e bem-estar.</p>
+    </div>
+    <div class="panel">
+      <h3>Distribuição de passos diários</h3>
+      <canvas id="chartHistSteps"></canvas>
+      <p class="small">Mostra concentração de usuários em faixas de atividade.</p>
+    </div>
+    <div class="panel">
+      <h3>Passos vs Calorias (amostra)</h3>
+      <canvas id="chartScatter"></canvas>
+      <p class="small">Visualiza relação moderada entre passos e calorias.</p>
+    </div>
+  </div>
+
+  <h2 style="margin-top:20px;">Tabela: resumo por usuário</h2>
+  <div class="tools">
+    <input id="search" placeholder="Filtrar por Id (ex: 8877...)"/>
+    <span class="small">Clique nos títulos para ordenar.</span>
+  </div>
+
+  <div style="max-height: 420px; overflow:auto; border:1px solid #e6e6e6; border-radius: 12px;">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th data-key="Id">Id</th>
+          <th data-key="dias">Dias</th>
+          <th data-key="passos_medios">Passos médios</th>
+          <th data-key="calorias_medias">Calorias médias</th>
+          <th data-key="sono_medio_min">Sono médio (min)</th>
+          <th data-key="sedentario_medio_min">Sedentário (min)</th>
+          <th data-key="muito_ativo_medio_min">Muito ativo (min)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="small" style="margin-top:16px;">Dashboard gerado automaticamente via Python.</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const DATA = {"kpis": {"users": 35, "days": 32, "avg_steps": 6547.0, "avg_cal": 2189.0, "avg_sleep": 21.8, "avg_sedent": 995.3, "avg_very_active": 16.6, "corr_steps_sleep": 0.105, "corr_steps_cal": 0.581}, "steps_weekday": {"labels": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "values": [7118.588235294118, 4914.917808219178, 7510.708333333333, 6847.083333333333, 6737.561643835616, 7089.7733333333335, 6058.013888888889]}, "sleep_weekday": {"labels": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "values": [4.970588235294118, 33.84931506849315, 53.958333333333336, 58.020833333333336, 4.808219178082192, 5.826666666666667, 13.722222222222221]}, "scatter_steps_cal": [{"x": 11004, "y": 1819}, {"x": 17609, "y": 2154}, {"x": 12736, "y": 1944}, {"x": 13231, "y": 1932}, {"x": 12041, "y": 1886}, {"x": 10970, "y": 1820}, {"x": 12256, "y": 1889}, {"x": 12262, "y": 1868}, {"x": 11248, "y": 1843}, {"x": 10016, "y": 1850}, {"x": 14557, "y": 2030}, {"x": 14844, "y": 2083}, {"x": 11974, "y": 1861}, {"x": 10198, "y": 1755}, {"x": 12521, "y": 1895}, {"x": 12432, "y": 1883}, {"x": 10057, "y": 1755}, {"x": 10990, "y": 1811}, {"x": 224, "y": 50}, {"x": 1810, "y": 1373}, {"x": 815, "y": 1264}, {"x": 1985, "y": 1350}, {"x": 1905, "y": 1342}, {"x": 1552, "y": 1300}, {"x": 1675, "y": 1313}, {"x": 4506, "y": 1498}, {"x": 9218, "y": 1541}, {"x": 1556, "y": 1327}, {"x": 2910, "y": 1452}, {"x": 18464, "y": 1574}, {"x": 1335, "y": 1308}, {"x": 1004, "y": 1276}, {"x": 1111, "y": 1278}, {"x": 6344, "y": 1409}, {"x": 3572, "y": 1370}, {"x": 3910, "y": 1555}, {"x": 10000, "y": 1469}, {"x": 6627, "y": 706}, {"x": 4636, "y": 3323}, {"x": 20237, "y": 4029}, {"x": 12912, "y": 3436}, {"x": 2819, "y": 2444}, {"x": 9921, "y": 3098}, {"x": 8046, "y": 2925}, {"x": 11166, "y": 3202}, {"x": 7842, "y": 2928}, {"x": 13840, "y": 3290}, {"x": 1329, "y": 489}, {"x": 6847, "y": 1969}, {"x": 5367, "y": 1889}, {"x": 2841, "y": 1636}, {"x": 0, "y": 1347}, {"x": 0, "y": 1347}, {"x": 7, "y": 1349}, {"x": 6344, "y": 1965}, {"x": 5316, "y": 1824}, {"x": 4979, "y": 1807}, {"x": 6556, "y": 1971}, {"x": 5430, "y": 1888}, {"x": 0, "y": 399}, {"x": 4317, "y": 2590}, {"x": 5662, "y": 2783}, {"x": 3198, "y": 2449}, {"x": 2352, "y": 2380}, {"x": 2234, "y": 2344}, {"x": 1259, "y": 2202}, {"x": 768, "y": 2130}, {"x": 519, "y": 2088}, {"x": 2523, "y": 2443}, {"x": 2105, "y": 2442}, {"x": 1209, "y": 2255}, {"x": 24, "y": 942}, {"x": 13603, "y": 2645}, {"x": 5477, "y": 2040}, {"x": 11144, "y": 2395}, {"x": 15313, "y": 2581}, {"x": 10805, "y": 2735}, {"x": 15392, "y": 2733}, {"x": 18247, "y": 3021}, {"x": 13023, "y": 2577}, {"x": 16267, "y": 2811}, {"x": 10005, "y": 2458}, {"x": 10106, "y": 2568}, {"x": 6717, "y": 1140}, {"x": 2605, "y": 1407}, {"x": 1229, "y": 1237}, {"x": 2308, "y": 1330}, {"x": 6679, "y": 1583}, {"x": 5645, "y": 1538}, {"x": 3180, "y": 1421}, {"x": 2767, "y": 1392}, {"x": 3762, "y": 1425}, {"x": 3098, "y": 1413}, {"x": 5142, "y": 1515}, {"x": 3279, "y": 1405}, {"x": 1019, "y": 600}, {"x": 0, "y": 1324}, {"x": 0, "y": 1324}, {"x": 0, "y": 1324}, {"x": 0, "y": 1324}, {"x": 4931, "y": 1708}, {"x": 6999, "y": 1950}, {"x": 1846, "y": 1508}, {"x": 3417, "y": 1625}, {"x": 4863, "y": 1772}, {"x": 2277, "y": 1530}, {"x": 11230, "y": 2206}, {"x": 2098, "y": 790}, {"x": 10272, "y": 2041}, {"x": 10533, "y": 2187}, {"x": 6760, "y": 1929}, {"x": 8328, "y": 1935}, {"x": 15459, "y": 2438}, {"x": 7485, "y": 2035}, {"x": 10254, "y": 2099}, {"x": 10114, "y": 2096}, {"x": 11107, "y": 2058}, {"x": 10320, "y": 2338}, {"x": 10209, "y": 2104}, {"x": 16081, "y": 2488}, {"x": 10078, "y": 2164}, {"x": 10001, "y": 2009}, {"x": 0, "y": 399}, {"x": 890, "y": 1335}, {"x": 2214, "y": 1559}, {"x": 7640, "y": 1845}, {"x": 9713, "y": 2046}, {"x": 8432, "y": 1953}, {"x": 7350, "y": 1910}, {"x": 9353, "y": 2035}, {"x": 7157, "y": 1944}, {"x": 14103, "y": 2257}, {"x": 5290, "y": 1724}, {"x": 7497, "y": 1741}, {"x": 0, "y": 0}, {"x": 0, "y": 1920}, {"x": 0, "y": 1920}, {"x": 0, "y": 1920}, {"x": 0, "y": 4562}, {"x": 4126, "y": 2881}, {"x": 0, "y": 1920}, {"x": 0, "y": 1920}, {"x": 2063, "y": 1144}, {"x": 5785, "y": 1852}, {"x": 7625, "y": 2069}, {"x": 4706, "y": 1816}, {"x": 5861, "y": 1878}, {"x": 4460, "y": 1787}, {"x": 6406, "y": 2010}, {"x": 7392, "y": 2038}, {"x": 5551, "y": 1815}, {"x": 8827, "y": 2062}, {"x": 4662, "y": 1276}, {"x": 4499, "y": 1288}, {"x": 7618, "y": 1490}, {"x": 11508, "y": 1630}, {"x": 11943, "y": 1648}, {"x": 12303, "y": 1649}, {"x": 15425, "y": 1783}, {"x": 8422, "y": 1431}, {"x": 10226, "y": 1524}, {"x": 14583, "y": 1697}, {"x": 3573, "y": 1232}, {"x": 3108, "y": 1223}, {"x": 759, "y": 182}, {"x": 5543, "y": 2990}, {"x": 3226, "y": 2480}, {"x": 3023, "y": 2570}, {"x": 5906, "y": 3016}, {"x": 12483, "y": 3830}, {"x": 8940, "y": 3706}, {"x": 368, "y": 2024}, {"x": 5702, "y": 2980}, {"x": 10330, "y": 3728}, {"x": 8778, "y": 3348}, {"x": 6662, "y": 3162}, {"x": 6309, "y": 3140}, {"x": 1951, "y": 1980}, {"x": 5563, "y": 3681}, {"x": 4370, "y": 3444}, {"x": 7144, "y": 3510}, {"x": 2106, "y": 4010}, {"x": 4152, "y": 2976}, {"x": 5400, "y": 3418}, {"x": 7428, "y": 3439}, {"x": 5351, "y": 3338}, {"x": 4299, "y": 2892}, {"x": 6107, "y": 3313}, {"x": 6429, "y": 3118}, {"x": 6880, "y": 2966}, {"x": 7476, "y": 3253}, {"x": 6581, "y": 3032}, {"x": 10480, "y": 4034}, {"x": 7734, "y": 3264}, {"x": 5129, "y": 2817}, {"x": 2993, "y": 2507}, {"x": 8, "y": 446}, {"x": 0, "y": 1777}, {"x": 0, "y": 1777}, {"x": 8433, "y": 2453}, {"x": 0, "y": 1776}, {"x": 2139, "y": 1935}, {"x": 0, "y": 1776}, {"x": 949, "y": 1870}, {"x": 0, "y": 1777}, {"x": 44, "y": 1782}, {"x": 2660, "y": 1978}, {"x": 5561, "y": 2296}, {"x": 7239, "y": 2484}, {"x": 7, "y": 1787}, {"x": 0, "y": 1776}, {"x": 0, "y": 1776}, {"x": 2275, "y": 2005}, {"x": 8, "y": 1778}, {"x": 5137, "y": 2293}, {"x": 5419, "y": 2259}, {"x": 0, "y": 1776}, {"x": 0, "y": 1776}, {"x": 0, "y": 1776}, {"x": 0, "y": 1776}, {"x": 0, "y": 1776}, {"x": 0, "y": 1776}, {"x": 18, "y": 1780}, {"x": 4, "y": 1778}, {"x": 8426, "y": 2360}, {"x": 1650, "y": 1952}, {"x": 3434, "y": 2101}, {"x": 6801, "y": 2393}, {"x": 187, "y": 538}, {"x": 5643, "y": 1958}, {"x": 9043, "y": 2141}, {"x": 8144, "y": 2129}, {"x": 9343, "y": 2216}, {"x": 8405, "y": 2154}, {"x": 8223, "y": 2178}, {"x": 10067, "y": 2308}, {"x": 8359, "y": 2201}, {"x": 10946, "y": 2341}, {"x": 9130, "y": 2236}, {"x": 6544, "y": 2069}, {"x": 0, "y": 0}, {"x": 0, "y": 1878}, {"x": 0, "y": 1878}, {"x": 0, "y": 1878}, {"x": 0, "y": 1878}, {"x": 0, "y": 1878}, {"x": 0, "y": 1878}, {"x": 0, "y": 1878}, {"x": 0, "y": 1296}, {"x": 2303, "y": 2010}, {"x": 2600, "y": 2032}, {"x": 4804, "y": 2227}, {"x": 3271, "y": 2133}, {"x": 5406, "y": 2317}, {"x": 3146, "y": 2058}, {"x": 2422, "y": 1935}, {"x": 4239, "y": 2217}, {"x": 6911, "y": 2374}, {"x": 6667, "y": 2335}, {"x": 5543, "y": 2303}, {"x": 4195, "y": 2210}, {"x": 6625, "y": 2424}, {"x": 5986, "y": 2297}, {"x": 278, "y": 745}, {"x": 5336, "y": 1902}, {"x": 3183, "y": 1680}, {"x": 6176, "y": 1901}, {"x": 8205, "y": 2078}, {"x": 6799, "y": 1876}, {"x": 5668, "y": 1853}, {"x": 7998, "y": 2235}, {"x": 4195, "y": 1778}, {"x": 5512, "y": 1882}, {"x": 6263, "y": 1906}, {"x": 8828, "y": 2149}, {"x": 1260, "y": 722}, {"x": 6506, "y": 2886}, {"x": 7583, "y": 2915}, {"x": 6963, "y": 2895}, {"x": 7165, "y": 2923}, {"x": 10328, "y": 3323}, {"x": 12116, "y": 3357}, {"x": 7810, "y": 2931}, {"x": 6670, "y": 2848}, {"x": 7605, "y": 2943}, {"x": 6585, "y": 2822}, {"x": 8184, "y": 2981}, {"x": 14002, "y": 3597}, {"x": 11135, "y": 3224}, {"x": 6499, "y": 2677}, {"x": 0, "y": 0}, {"x": 12409, "y": 2142}, {"x": 2937, "y": 1615}, {"x": 1515, "y": 1481}, {"x": 8921, "y": 1892}, {"x": 11306, "y": 2086}, {"x": 12252, "y": 2044}, {"x": 15444, "y": 2249}, {"x": 9938, "y": 2019}, {"x": 4599, "y": 1692}, {"x": 5594, "y": 1712}, {"x": 11906, "y": 2065}, {"x": 3436, "y": 633}, {"x": 10461, "y": 3625}, {"x": 14873, "y": 4430}, {"x": 9917, "y": 3427}, {"x": 7401, "y": 3492}, {"x": 8964, "y": 3597}, {"x": 11080, "y": 3765}, {"x": 4499, "y": 2775}, {"x": 4363, "y": 2486}, {"x": 10494, "y": 3817}, {"x": 9776, "y": 3378}, {"x": 2862, "y": 1511}, {"x": 7444, "y": 2210}, {"x": 19658, "y": 2884}, {"x": 0, "y": 1496}, {"x": 8468, "y": 2262}, {"x": 9910, "y": 2445}, {"x": 12409, "y": 2694}, {"x": 4853, "y": 1903}, {"x": 8955, "y": 2482}, {"x": 10789, "y": 2617}, {"x": 0, "y": 0}, {"x": 6633, "y": 2778}, {"x": 9548, "y": 3119}, {"x": 0, "y": 2664}, {"x": 0, "y": 2060}, {"x": 0, "y": 2060}, {"x": 0, "y": 2060}, {"x": 0, "y": 2060}, {"x": 0, "y": 2060}, {"x": 0, "y": 2060}, {"x": 0, "y": 735}, {"x": 0, "y": 1820}, {"x": 2101, "y": 2224}, {"x": 0, "y": 1820}, {"x": 0, "y": 1820}, {"x": 9766, "y": 2442}, {"x": 165, "y": 1849}, {"x": 0, "y": 1822}, {"x": 0, "y": 1820}, {"x": 0, "y": 251}, {"x": 7225, "y": 3065}, {"x": 1988, "y": 2207}, {"x": 1577, "y": 1977}, {"x": 0, "y": 1841}, {"x": 9348, "y": 4286}, {"x": 11761, "y": 3920}, {"x": 13987, "y": 3856}, {"x": 4131, "y": 2584}, {"x": 14, "y": 787}, {"x": 15491, "y": 2244}, {"x": 14097, "y": 2188}, {"x": 10467, "y": 2014}, {"x": 12437, "y": 2115}, {"x": 12307, "y": 2055}, {"x": 18952, "y": 2437}, {"x": 12010, "y": 2158}, {"x": 12480, "y": 2170}, {"x": 13417, "y": 2244}, {"x": 14400, "y": 2188}, {"x": 12495, "y": 2231}, {"x": 10148, "y": 2100}, {"x": 12362, "y": 2188}, {"x": 5893, "y": 917}, {"x": 11680, "y": 2573}, {"x": 10976, "y": 2575}, {"x": 16806, "y": 3086}, {"x": 15266, "y": 2886}, {"x": 12084, "y": 2676}, {"x": 13513, "y": 2811}, {"x": 14100, "y": 2840}, {"x": 12627, "y": 2871}, {"x": 10345, "y": 2613}, {"x": 10146, "y": 2700}, {"x": 12168, "y": 2871}, {"x": 7413, "y": 1023}, {"x": 11463, "y": 2496}, {"x": 87, "y": 1641}, {"x": 1949, "y": 1794}, {"x": 6101, "y": 2421}, {"x": 7478, "y": 2439}, {"x": 7352, "y": 2233}, {"x": 14604, "y": 2862}, {"x": 9634, "y": 2752}, {"x": 7338, "y": 2519}, {"x": 569, "y": 1799}, {"x": 6242, "y": 2543}, {"x": 430, "y": 625}, {"x": 20188, "y": 3377}, {"x": 25701, "y": 3697}, {"x": 17395, "y": 3209}, {"x": 17167, "y": 3167}, {"x": 16435, "y": 3122}, {"x": 17078, "y": 3176}, {"x": 11693, "y": 2790}, {"x": 11159, "y": 2715}, {"x": 10118, "y": 2684}, {"x": 16064, "y": 3097}, {"x": 290, "y": 791}, {"x": 0, "y": 1429}, {"x": 0, "y": 1429}, {"x": 0, "y": 1429}, {"x": 0, "y": 1429}, {"x": 0, "y": 1429}, {"x": 1931, "y": 1607}, {"x": 5181, "y": 1776}, {"x": 12026, "y": 2162}, {"x": 5360, "y": 1832}, {"x": 2545, "y": 1657}, {"x": 1636, "y": 1377}, {"x": 0, "y": 0}, {"x": 14179, "y": 3669}, {"x": 3358, "y": 2702}, {"x": 9152, "y": 3304}, {"x": 13935, "y": 4234}, {"x": 12846, "y": 4128}, {"x": 9124, "y": 3798}, {"x": 9725, "y": 3839}, {"x": 8350, "y": 3713}, {"x": 2240, "y": 2606}, {"x": 2631, "y": 2624}, {"x": 8837, "y": 3775}, {"x": 3246, "y": 1882}, {"x": 2174, "y": 2360}, {"x": 3494, "y": 2517}, {"x": 2380, "y": 2400}, {"x": 3159, "y": 2462}, {"x": 6835, "y": 2786}, {"x": 2098, "y": 2354}, {"x": 2816, "y": 2437}, {"x": 1408, "y": 1814}, {"x": 4592, "y": 2260}, {"x": 8452, "y": 3004}, {"x": 7238, "y": 2667}, {"x": 3821, "y": 2229}, {"x": 2332, "y": 2100}, {"x": 2121, "y": 2114}, {"x": 1291, "y": 1961}, {"x": 1467, "y": 1953}, {"x": 1022, "y": 1890}, {"x": 4605, "y": 2253}, {"x": 178, "y": 1725}, {"x": 20, "y": 728}, {"x": 18700, "y": 3527}, {"x": 27572, "y": 4220}, {"x": 15260, "y": 3864}, {"x": 20779, "y": 3662}, {"x": 10695, "y": 2834}, {"x": 24136, "y": 4039}, {"x": 10910, "y": 2947}, {"x": 23014, "y": 4196}, {"x": 16470, "y": 3841}, {"x": 28497, "y": 4526}, {"x": 10622, "y": 2820}, {"x": 2350, "y": 938}], "hist_steps": {"labels": ["0\u20131899", "1899\u20133799", "3799\u20135699", "5699\u20137599", "7599\u20139499", "9499\u201311398", "11398\u201313298", "13298\u201315198", "15198\u201317098", "17098\u201318998", "18998\u201320897", "20897\u201322797", "22797\u201324697", "24697\u201326597", "26597\u201328497"], "values": [109, 61, 53, 58, 39, 55, 34, 17, 15, 7, 4, 0, 2, 1, 2]}, "table": [{"Id": 1503960366, "dias": 19, "passos_medios": 11641, "calorias_medias": 1796, "sono_medio_min": 105.3, "sedentario_medio_min": 809.8, "muito_ativo_medio_min": 35.8}, {"Id": 1624580081, "dias": 19, "passos_medios": 4226, "calorias_medias": 1353, "sono_medio_min": 0.0, "sedentario_medio_min": 1278.3, "muito_ativo_medio_min": 0.7}, {"Id": 1644430081, "dias": 10, "passos_medios": 9275, "calorias_medias": 2916, "sono_medio_min": 0.0, "sedentario_medio_min": 1034.2, "muito_ativo_medio_min": 14.8}, {"Id": 1844505072, "dias": 12, "passos_medios": 3641, "calorias_medias": 1616, "sono_medio_min": 0.0, "sedentario_medio_min": 1035.3, "muito_ativo_medio_min": 0.8}, {"Id": 1927972279, "dias": 12, "passos_medios": 2181, "calorias_medias": 2254, "sono_medio_min": 0.0, "sedentario_medio_min": 952.9, "muito_ativo_medio_min": 0.0}, {"Id": 2022484408, "dias": 12, "passos_medios": 12175, "calorias_medias": 2475, "sono_medio_min": 0.0, "sedentario_medio_min": 1058.9, "muito_ativo_medio_min": 40.1}, {"Id": 2026352035, "dias": 12, "passos_medios": 3393, "calorias_medias": 1356, "sono_medio_min": 0.0, "sedentario_medio_min": 659.2, "muito_ativo_medio_min": 0.0}, {"Id": 2320127002, "dias": 12, "passos_medios": 3138, "calorias_medias": 1532, "sono_medio_min": 0.0, "sedentario_medio_min": 1249.2, "muito_ativo_medio_min": 0.9}, {"Id": 2347167796, "dias": 15, "passos_medios": 9800, "calorias_medias": 2021, "sono_medio_min": 94.1, "sedentario_medio_min": 683.9, "muito_ativo_medio_min": 11.8}, {"Id": 2873212765, "dias": 12, "passos_medios": 6637, "calorias_medias": 1696, "sono_medio_min": 0.0, "sedentario_medio_min": 1136.9, "muito_ativo_medio_min": 5.1}, {"Id": 2891001357, "dias": 8, "passos_medios": 774, "calorias_medias": 2273, "sono_medio_min": 0.0, "sedentario_medio_min": 1099.9, "muito_ativo_medio_min": 0.0}, {"Id": 3372868164, "dias": 10, "passos_medios": 6128, "calorias_medias": 1860, "sono_medio_min": 0.0, "sedentario_medio_min": 1085.1, "muito_ativo_medio_min": 11.8}, {"Id": 3977333714, "dias": 12, "passos_medios": 8664, "calorias_medias": 1398, "sono_medio_min": 0.0, "sedentario_medio_min": 708.8, "muito_ativo_medio_min": 12.2}, {"Id": 4020332650, "dias": 32, "passos_medios": 5777, "calorias_medias": 3075, "sono_medio_min": 80.0, "sedentario_medio_min": 1083.2, "muito_ativo_medio_min": 4.1}, {"Id": 4057192912, "dias": 32, "passos_medios": 1887, "calorias_medias": 1904, "sono_medio_min": 0.0, "sedentario_medio_min": 1358.1, "muito_ativo_medio_min": 1.2}, {"Id": 4319703577, "dias": 12, "passos_medios": 7821, "calorias_medias": 1994, "sono_medio_min": 83.8, "sedentario_medio_min": 780.1, "muito_ativo_medio_min": 6.6}, {"Id": 4388161847, "dias": 8, "passos_medios": 0, "calorias_medias": 1805, "sono_medio_min": 0.0, "sedentario_medio_min": 1384.2, "muito_ativo_medio_min": 0.0}, {"Id": 4445114986, "dias": 15, "passos_medios": 4293, "calorias_medias": 2108, "sono_medio_min": 53.5, "sedentario_medio_min": 861.4, "muito_ativo_medio_min": 5.1}, {"Id": 4558609924, "dias": 12, "passos_medios": 5785, "calorias_medias": 1830, "sono_medio_min": 0.0, "sedentario_medio_min": 1085.3, "muito_ativo_medio_min": 4.3}, {"Id": 4702921684, "dias": 15, "passos_medios": 7943, "calorias_medias": 2821, "sono_medio_min": 83.6, "sedentario_medio_min": 726.7, "muito_ativo_medio_min": 2.9}, {"Id": 5553957443, "dias": 12, "passos_medios": 8355, "calorias_medias": 1802, "sono_medio_min": 0.0, "sedentario_medio_min": 607.8, "muito_ativo_medio_min": 23.6}, {"Id": 5577150313, "dias": 11, "passos_medios": 8608, "calorias_medias": 3300, "sono_medio_min": 0.0, "sedentario_medio_min": 665.8, "muito_ativo_medio_min": 81.8}, {"Id": 6117666160, "dias": 10, "passos_medios": 8249, "calorias_medias": 2099, "sono_medio_min": 0.0, "sedentario_medio_min": 864.1, "muito_ativo_medio_min": 0.5}, {"Id": 6290855005, "dias": 10, "passos_medios": 1618, "calorias_medias": 2166, "sono_medio_min": 0.0, "sedentario_medio_min": 1289.6, "muito_ativo_medio_min": 7.8}, {"Id": 6391747486, "dias": 9, "passos_medios": 1337, "calorias_medias": 1763, "sono_medio_min": 0.0, "sedentario_medio_min": 1261.9, "muito_ativo_medio_min": 5.1}, {"Id": 6775888955, "dias": 9, "passos_medios": 5559, "calorias_medias": 2725, "sono_medio_min": 0.0, "sedentario_medio_min": 1017.9, "muito_ativo_medio_min": 19.9}, {"Id": 6962181067, "dias": 14, "passos_medios": 12640, "calorias_medias": 2089, "sono_medio_min": 66.2, "sedentario_medio_min": 606.3, "muito_ativo_medio_min": 35.4}, {"Id": 7007744171, "dias": 12, "passos_medios": 12260, "calorias_medias": 2627, "sono_medio_min": 0.0, "sedentario_medio_min": 1000.7, "muito_ativo_medio_min": 44.7}, {"Id": 7086361926, "dias": 12, "passos_medios": 6104, "calorias_medias": 2177, "sono_medio_min": 0.0, "sedentario_medio_min": 888.8, "muito_ativo_medio_min": 26.2}, {"Id": 8053475328, "dias": 11, "passos_medios": 14844, "calorias_medias": 2893, "sono_medio_min": 0.0, "sedentario_medio_min": 1114.5, "muito_ativo_medio_min": 84.8}, {"Id": 8253242879, "dias": 12, "passos_medios": 2390, "calorias_medias": 1463, "sono_medio_min": 0.0, "sedentario_medio_min": 1352.3, "muito_ativo_medio_min": 5.8}, {"Id": 8378563200, "dias": 12, "passos_medios": 8135, "calorias_medias": 3356, "sono_medio_min": 0.0, "sedentario_medio_min": 684.2, "muito_ativo_medio_min": 55.4}, {"Id": 8583815059, "dias": 8, "passos_medios": 3046, "calorias_medias": 2391, "sono_medio_min": 0.0, "sedentario_medio_min": 1261.8, "muito_ativo_medio_min": 0.6}, {"Id": 8792009665, "dias": 12, "passos_medios": 3095, "calorias_medias": 2074, "sono_medio_min": 0.0, "sedentario_medio_min": 893.6, "muito_ativo_medio_min": 1.5}, {"Id": 8877689391, "dias": 12, "passos_medios": 17417, "calorias_medias": 3451, "sono_medio_min": 0.0, "sedentario_medio_min": 1046.2, "muito_ativo_medio_min": 66.8}]};
+
+    // ---------- KPIs ----------
+    const k = DATA.kpis;
+    const kpisDiv = document.getElementById("kpis");
+    const kpis = [
+      {v: k.users, l:"Usuários únicos"},
+      {v: k.days, l:"Dias analisados"},
+      {v: k.avg_steps.toLocaleString('pt-BR'), l:"Passos médios/dia"},
+      {v: k.avg_cal.toLocaleString('pt-BR'), l:"Calorias médias/dia"},
+      {v: k.avg_sleep.toLocaleString('pt-BR'), l:"Sono médio (min)"},
+      {v: k.avg_sedent.toLocaleString('pt-BR'), l:"Sedentário (min)"},
+      {v: k.avg_very_active.toLocaleString('pt-BR'), l:"Muito ativo (min)"},
+      {v: "CSV limpo", l:"Entrega"},
+    ];
+    kpis.forEach(x => {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.innerHTML = `<div class="kpi">${x.v}</div><div class="label">${x.l}</div>`;
+      kpisDiv.appendChild(el);
+    });
+
+    document.getElementById("corr1").textContent = k.corr_steps_sleep;
+    document.getElementById("corr2").textContent = k.corr_steps_cal;
+
+    // ---------- Insights automáticos ----------
+    const insight = document.getElementById("insightBox");
+    const corrSleep = k.corr_steps_sleep;
+    const corrCal = k.corr_steps_cal;
+
+    let txt = "";
+    txt += `<b>Leitura rápida:</b><br/>`;
+    txt += `• Passos × Sono: correlação <b>${corrSleep}</b> → relação fraca (passos não explicam sono sozinhos).<br/>`;
+    txt += `• Passos × Calorias: correlação <b>${corrCal}</b> → relação moderada (passos ajudam a explicar gasto calórico).<br/>`;
+    txt += `<br/><b>Implicação Bellabeat:</b> atacar sedentarismo (muito alto) + metas progressivas de passos + rotinas de sono (conteúdo e lembretes).`;
+    insight.innerHTML = txt;
+
+    // ---------- Charts helpers ----------
+    function makeBar(ctx, labels, values, title) {
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: title, data: values }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display:false } },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // Passos por weekday
+    makeBar(
+      document.getElementById("chartStepsWeek"),
+      DATA.steps_weekday.labels,
+      DATA.steps_weekday.values.map(v => Math.round(v)),
+      "Passos médios"
+    );
+
+    // Sono por weekday
+    makeBar(
+      document.getElementById("chartSleepWeek"),
+      DATA.sleep_weekday.labels,
+      DATA.sleep_weekday.values.map(v => Math.round(v)),
+      "Sono médio (min)"
+    );
+
+    // Hist passos
+    new Chart(document.getElementById("chartHistSteps"), {
+      type: 'bar',
+      data: {
+        labels: DATA.hist_steps.labels,
+        datasets: [{ label: "Quantidade de dias", data: DATA.hist_steps.values }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display:false } },
+        scales: { y: { beginAtZero:true } }
+      }
+    });
+
+    // Scatter passos vs calorias
+    new Chart(document.getElementById("chartScatter"), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: "Passos vs Calorias",
+          data: DATA.scatter_steps_cal
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display:false } },
+        scales: {
+          x: { title: { display:true, text:"TotalSteps" } },
+          y: { title: { display:true, text:"Calories" } }
+        }
+      }
+    });
+
+    // ---------- Table (filter + sort) ----------
+    let rows = DATA.table.slice();
+    let sortKey = "Id";
+    let sortAsc = true;
+
+    const tbody = document.querySelector("#tbl tbody");
+    const search = document.getElementById("search");
+
+    function renderTable() {
+      const q = (search.value || "").trim();
+      const filtered = rows.filter(r => String(r.Id).includes(q));
+
+      tbody.innerHTML = "";
+      filtered.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.Id}</td>
+          <td>${r.dias}</td>
+          <td>${r.passos_medios.toLocaleString('pt-BR')}</td>
+          <td>${r.calorias_medias.toLocaleString('pt-BR')}</td>
+          <td>${r.sono_medio_min}</td>
+          <td>${r.sedentario_medio_min}</td>
+          <td>${r.muito_ativo_medio_min}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function sortBy(key) {
+      if (sortKey === key) sortAsc = !sortAsc;
+      else { sortKey = key; sortAsc = true; }
+
+      rows.sort((a,b) => {
+        const av = a[key];
+        const bv = b[key];
+        if (av < bv) return sortAsc ? -1 : 1;
+        if (av > bv) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      renderTable();
+    }
+
+    document.querySelectorAll("#tbl th").forEach(th => {
+      th.addEventListener("click", () => sortBy(th.dataset.key));
+    });
+
+    search.addEventListener("input", renderTable);
+    renderTable();
+  </script>
+</body>
+</html>
